@@ -1,6 +1,9 @@
 name: Build Android APK
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-apk:
@@ -9,49 +12,65 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Setup Python 3.10
+    - name: Set up Python 3.8  # Downgrade to compatible Python version
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: '3.8'
 
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config 
-        zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev python3-pip
+        sudo apt-get install -y \
+          git zip unzip openjdk-8-jdk \  # Use JDK 8 for Android compatibility
+          autoconf libtool pkg-config \
+          zlib1g-dev libncurses5-dev \
+          libncursesw5-dev libtinfo5 \
+          cmake libffi-dev libssl-dev \
+          python3-pip
 
     - name: Install Android SDK and NDK
       run: |
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
+        
+        # Install Android SDK
         wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O cmdline-tools.zip
         unzip cmdline-tools.zip -d ~/.android/cmdline-tools
         mv ~/.android/cmdline-tools/cmdline-tools ~/.android/cmdline-tools/latest
-        wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
-        unzip android-ndk-r25b-linux.zip -d ~/.android
-        mv ~/.android/android-ndk-r25b ~/.android/android-ndk
-        yes | ~/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.android "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        
+        # Install NDK 19c (compatible with Python 3.8)
+        wget https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip
+        unzip android-ndk-r19c-linux-x86_64.zip -d ~/.android
+        mv ~/.android/android-ndk-r19c ~/.android/android-ndk
+        
+        # Install SDK components
+        yes | ~/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.android "platform-tools" "platforms;android-28" "build-tools;30.0.3"
         ~/.android/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-    - name: Install Buildozer
-      run: pip install buildozer cython==0.29.36
+        echo "ANDROID_HOME=$HOME/.android" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=$HOME/.android/android-ndk" >> $GITHUB_ENV
 
-    - name: Patch ReportLab
+    - name: Install Buildozer
       run: |
-        find $HOME/.buildozer -name '_rl_accel.c' -delete
-        find $HOME/.buildozer -name '_renderPM.c' -delete
-        echo "def _dummy_extension(): pass" > $(find $HOME/.buildozer -name rl_accel | head -1)/_rl_accel.py
+        pip install buildozer cython==0.29.36
+
+    - name: Patch buildozer.spec
+      run: |
+        # Force Python 3.8 and compatible dependencies
+        echo "requirements = python3.8, kivy==2.3.0, reportlab==3.6.13, plyer, android" >> buildozer.spec
+        echo "android.ndk = 19c" >> buildozer.spec
+        echo "android.api = 28" >> buildozer.spec
 
     - name: Build APK
       run: |
-        export REPORTLAB_NO_C_EXTENSIONS=1
-        export REPORTLAB_NO_RENDERPM=1
+        export PATH=$PATH:$ANDROID_HOME/build-tools/30.0.3
         buildozer -v android release
         mkdir dist
         cp bin/*.apk dist/
 
-    - name: Upload APK
+    - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-apk
+        name: gate-survey-app
         path: dist/*.apk
+        retention-days: 5
