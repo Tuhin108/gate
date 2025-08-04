@@ -31,17 +31,14 @@ jobs:
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
         
-        # Install Android SDK
         wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O cmdline-tools.zip
         unzip cmdline-tools.zip -d ~/.android/cmdline-tools
         mv ~/.android/cmdline-tools/cmdline-tools ~/.android/cmdline-tools/latest
         
-        # Install NDK 25b
         wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
         unzip android-ndk-r25b-linux.zip -d ~/.android
         mv ~/.android/android-ndk-r25b ~/.android/android-ndk
         
-        # Install SDK components
         yes | ~/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.android "platform-tools" "platforms;android-34" "build-tools;34.0.0"
         ~/.android/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
@@ -55,58 +52,50 @@ jobs:
 
     - name: Configure buildozer.spec
       run: |
-        # Create buildozer.spec if not exists
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
 
-        # Update requirements and settings
-        cat <<EOF > buildozer.spec
-[app]
-title = Gate Survey App
-package.name = gatesurvey
-package.domain = org.gatesurvey
-source.dir = .
-source.include_exts = py,png,jpg,kv
-source.include_patterns = assets/*
-version = 1.0.0
-requirements = 
-    python3,
-    kivy==2.3.0,
-    reportlab==3.6.13,
-    plyer,
-    android
-orientation = portrait
-fullscreen = 0
+        # Create a clean buildozer.spec file
+        cat > buildozer.spec <<EOL
+        [app]
+        title = Gate Survey App
+        package.name = gatesurvey
+        package.domain = org.gatesurvey
+        source.dir = .
+        source.include_exts = py,png,jpg,kv
+        source.include_patterns = assets/*
+        version = 1.0.0
+        requirements = python3,kivy==2.3.0,reportlab==3.6.13,plyer,android
+        orientation = portrait
+        fullscreen = 0
 
-# Android specific
-android.permissions = CAMERA,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
-android.api = 34
-android.minapi = 21
-android.ndk = 25b
-android.sdk = 34
-android.archs = arm64-v8a,armeabi-v7a
-p4a.branch = master
+        # Android specific
+        android.permissions = CAMERA,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+        android.api = 34
+        android.minapi = 21
+        android.ndk = 25b
+        android.sdk = 34
+        android.archs = arm64-v8a,armeabi-v7a
+        p4a.branch = master
 
-# Build tools
-android.build_tools = 34.0.0
-android.accept_sdk_license = True
-android.ndk_path = $HOME/.android/android-ndk
+        # Build tools
+        android.build_tools = 34.0.0
+        android.accept_sdk_license = True
+        android.ndk_path = $HOME/.android/android-ndk
 
-[buildozer]
-log_level = 2
-warn_on_root = 1
-EOF
+        [buildozer]
+        log_level = 2
+        warn_on_root = 1
+        EOL
 
-    - name: Patch ReportLab build
+    - name: Patch ReportLab recipe
       run: |
-        # Force pure Python implementation
-        export REPORTLAB_NO_C_EXTENSIONS=1
-        
-        # Modify the recipe to use PyPI instead of invalid URL
-        find ~/.buildozer -name 'reportlab.py' -exec sed -i "s|https://hg.reportlab.com|https://files.pythonhosted.org|g" {} \;
-        find ~/.buildozer -name 'reportlab.py' -exec sed -i "s|hg-public/reportlab/archive/|packages/source/r/reportlab/reportlab-|g" {} \;
-        find ~/.buildozer -name 'reportlab.py' -exec sed -i "s|.tar.gz|.tar.gz|g" {} \;
+        # Find and fix the reportlab recipe URL
+        find ~/.buildozer -name 'reportlab.py' -exec sed -i \
+          -e "s|https://hg.reportlab.com|https://files.pythonhosted.org|g" \
+          -e "s|hg-public/reportlab/archive/|packages/source/r/reportlab/reportlab-|g" \
+          -e "s|.tar.gz|.tar.gz|g" {} \;
 
     - name: Build APK
       run: |
