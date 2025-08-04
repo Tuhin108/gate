@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -55,47 +55,46 @@ jobs:
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
+        
+        # Write buildozer.spec with proper formatting
+        echo '[app]' > buildozer.spec
+        echo 'title = Gate Survey App' >> buildozer.spec
+        echo 'package.name = gatesurvey' >> buildozer.spec
+        echo 'package.domain = org.gatesurvey' >> buildozer.spec
+        echo 'source.dir = .' >> buildozer.spec
+        echo 'source.include_exts = py,png,jpg,kv' >> buildozer.spec
+        echo 'source.include_patterns = assets/*' >> buildozer.spec
+        echo 'version = 1.0.0' >> buildozer.spec
+        echo 'requirements = python3,kivy==2.3.0,reportlab==3.6.13,plyer,android' >> buildozer.spec
+        echo 'orientation = portrait' >> buildozer.spec
+        echo 'fullscreen = 0' >> buildozer.spec
+        echo '' >> buildozer.spec
+        echo '# Android specific' >> buildozer.spec
+        echo 'android.permissions = CAMERA,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE' >> buildozer.spec
+        echo 'android.api = 34' >> buildozer.spec
+        echo 'android.minapi = 21' >> buildozer.spec
+        echo 'android.ndk = 25b' >> buildozer.spec
+        echo 'android.sdk = 34' >> buildozer.spec
+        echo 'android.archs = arm64-v8a,armeabi-v7a' >> buildozer.spec
+        echo 'p4a.branch = master' >> buildozer.spec
+        echo '' >> buildozer.spec
+        echo '# Build tools' >> buildozer.spec
+        echo 'android.build_tools = 34.0.0' >> buildozer.spec
+        echo 'android.accept_sdk_license = True' >> buildozer.spec
+        echo "android.ndk_path = $HOME/.android/android-ndk" >> buildozer.spec
+        echo '' >> buildozer.spec
+        echo '[buildozer]' >> buildozer.spec
+        echo 'log_level = 2' >> buildozer.spec
+        echo 'warn_on_root = 1' >> buildozer.spec
 
-        # Create a clean buildozer.spec file
-        cat > buildozer.spec <<EOL
-        [app]
-        title = Gate Survey App
-        package.name = gatesurvey
-        package.domain = org.gatesurvey
-        source.dir = .
-        source.include_exts = py,png,jpg,kv
-        source.include_patterns = assets/*
-        version = 1.0.0
-        requirements = python3,kivy==2.3.0,reportlab==3.6.13,plyer,android
-        orientation = portrait
-        fullscreen = 0
-
-        # Android specific
-        android.permissions = CAMERA,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
-        android.api = 34
-        android.minapi = 21
-        android.ndk = 25b
-        android.sdk = 34
-        android.archs = arm64-v8a,armeabi-v7a
-        p4a.branch = master
-
-        # Build tools
-        android.build_tools = 34.0.0
-        android.accept_sdk_license = True
-        android.ndk_path = $HOME/.android/android-ndk
-
-        [buildozer]
-        log_level = 2
-        warn_on_root = 1
-        EOL
+    - name: Initialize Buildozer environment
+      run: buildozer android update > /dev/null 2>&1 || true
 
     - name: Patch ReportLab recipe
       run: |
-        # Find and fix the reportlab recipe URL
-        find ~/.buildozer -name 'reportlab.py' -exec sed -i \
+        find .buildozer -name 'reportlab.py' -exec sed -i \
           -e "s|https://hg.reportlab.com|https://files.pythonhosted.org|g" \
-          -e "s|hg-public/reportlab/archive/|packages/source/r/reportlab/reportlab-|g" \
-          -e "s|.tar.gz|.tar.gz|g" {} \;
+          -e "s|hg-public/reportlab/archive/|packages/source/r/reportlab/reportlab-|g" {} \;
 
     - name: Build APK
       run: |
