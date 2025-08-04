@@ -66,17 +66,46 @@ jobs:
         pip install --upgrade pip virtualenv
         pip install buildozer cython==0.29.36
 
-    - name: Patch reportlab setup
+    - name: Patch ReportLab
       run: |
-        # Force reportlab to skip problematic C extensions
-        echo "REPORTLAB_NO_C_EXTENSIONS=1" >> $GITHUB_ENV
+        # Remove problematic C extension files
+        find . -name '_rl_accel.c' -delete
+        find . -name '_renderPM.c' -delete
+        
+        # Patch setup.py to disable C extensions
+        for f in $(find . -name setup.py); do
+          sed -i "s/ext_modules=.*/ext_modules=[],/g" $f
+          sed -i "s/name='_rl_accel'/name='_rl_accel_dummy'/g" $f
+          sed -i "s/name='_renderPM'/name='_renderPM_dummy'/g" $f
+        done
+        
+        # Create dummy extension files
+        mkdir -p reportlab/src/rl_addons/rl_accel
+        touch reportlab/src/rl_addons/rl_accel/_rl_accel.py
+        echo "def _fake_extension(): pass" > reportlab/src/rl_addons/rl_accel/__init__.py
+        
+        # Create dummy renderPM files
+        mkdir -p reportlab/src/rl_addons/renderPM
+        touch reportlab/src/rl_addons/renderPM/_renderPM.py
+        echo "def _fake_renderpm(): pass" > reportlab/src/rl_addons/renderPM/__init__.py
+
+    - name: Configure buildozer.spec
+      run: |
+        # Ensure buildozer uses the correct NDK path
         sed -i "s|#android.ndk_path =.*|android.ndk_path = $HOME/.android/android-ndk|" buildozer.spec
+        
+        # Add reportlab patch settings
+        echo "" >> buildozer.spec
+        echo "# ReportLab patch settings" >> buildozer.spec
+        echo "REPORTLAB_NO_C_EXTENSIONS = 1" >> buildozer.spec
+        echo "REPORTLAB_NO_RENDERPM = 1" >> buildozer.spec
 
     - name: Build APK
       run: |
         export PATH=$PATH:$ANDROID_HOME/build-tools/34.0.0
         export ANDROID_NDK_HOME=$HOME/.android/android-ndk
         export REPORTLAB_NO_C_EXTENSIONS=1
+        export REPORTLAB_NO_RENDERPM=1
         buildozer -v android release
         mkdir dist
         cp bin/*.apk dist/
