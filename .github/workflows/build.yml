@@ -37,14 +37,23 @@ jobs:
           libssl-dev \
           python3-pip
 
-    - name: Install Android SDK and build-tools
+    - name: Install Android SDK and NDK
       run: |
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
+        
+        # Install Android SDK
         wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O cmdline-tools.zip
         unzip cmdline-tools.zip -d ~/.android/cmdline-tools
         mv ~/.android/cmdline-tools/cmdline-tools ~/.android/cmdline-tools/latest
-        yes | ~/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.1"
+        
+        # Install NDK 25b
+        wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
+        unzip android-ndk-r25b-linux.zip -d ~/.android
+        mv ~/.android/android-ndk-r25b ~/.android/android-ndk
+        
+        # Install SDK components
+        yes | ~/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-34" "build-tools;34.0.0"
         ~/.android/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Install Buildozer and dependencies
@@ -54,7 +63,8 @@ jobs:
 
     - name: Build APK
       run: |
-        export PATH=$PATH:$ANDROID_HOME/build-tools/33.0.1
+        export PATH=$PATH:$ANDROID_HOME/build-tools/34.0.0
+        export ANDROID_NDK_HOME=~/.android/android-ndk
         buildozer -v android release
         mkdir dist
         cp bin/*.apk dist/
