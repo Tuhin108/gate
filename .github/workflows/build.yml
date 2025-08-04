@@ -1,3 +1,4 @@
+# Alternative workflow if you have buildozer.spec in repo
 name: Build Android APK
 
 on:
@@ -20,22 +21,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          git \
-          zip \
-          unzip \
-          openjdk-17-jdk \
-          autoconf \
-          libtool \
-          pkg-config \
-          zlib1g-dev \
-          libncurses5-dev \
-          libncursesw5-dev \
-          libtinfo5 \
-          cmake \
-          libffi-dev \
-          libssl-dev \
-          python3-pip
+        sudo apt-get install -y openjdk-17-jdk zlib1g-dev libncurses5-dev libffi-dev libssl-dev
 
     - name: Accept Android licenses
       run: |
@@ -43,36 +29,8 @@ jobs:
         touch ~/.android/repositories.cfg
         yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses || true
 
-    - name: Install Buildozer and dependencies
-      run: |
-        pip install --upgrade pip virtualenv
-        pip install buildozer cython==0.29.36
-
-    - name: Configure Buildozer
-      run: |
-        buildozer init
-        # Create minimal buildozer.spec
-        cat << EOF > buildozer.spec
-        [app]
-        title = Gate Survey App
-        package.name = gatesurvey
-        package.domain = org.gatesurvey
-        source.dir = .
-        source.include_exts = py,png,jpg,kv
-        source.include_patterns = assets/*
-        version = 1.0.0
-        requirements = python3,kivy==2.2.1,reportlab,plyer,android
-        orientation = portrait
-        osx.python_version = 3
-        osx.kivy_version = 2.2.1
-        fullscreen = 0
-        android.permissions = CAMERA,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
-        android.api = 33
-        android.minapi = 21
-        android.ndk = 23b
-        p4a.branch = master
-        android.arch = armeabi-v7a
-        EOF
+    - name: Install Buildozer
+      run: pip install buildozer
 
     - name: Build APK
       run: |
