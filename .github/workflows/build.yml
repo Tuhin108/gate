@@ -1,9 +1,6 @@
 name: Build Android APK
 
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
   build-apk:
@@ -12,7 +9,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Python 3.10
+    - name: Setup Python 3.10
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
@@ -20,99 +17,41 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          git \
-          zip \
-          unzip \
-          openjdk-17-jdk \
-          autoconf \
-          libtool \
-          pkg-config \
-          zlib1g-dev \
-          libncurses5-dev \
-          libncursesw5-dev \
-          libtinfo5 \
-          cmake \
-          libffi-dev \
-          libssl-dev \
-          python3-pip
+        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config 
+        zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev python3-pip
 
     - name: Install Android SDK and NDK
       run: |
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
-        
-        # Install Android SDK
         wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip -O cmdline-tools.zip
         unzip cmdline-tools.zip -d ~/.android/cmdline-tools
         mv ~/.android/cmdline-tools/cmdline-tools ~/.android/cmdline-tools/latest
-        
-        # Install NDK 25b
         wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
         unzip android-ndk-r25b-linux.zip -d ~/.android
         mv ~/.android/android-ndk-r25b ~/.android/android-ndk
-        
-        # Install SDK components
         yes | ~/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.android "platform-tools" "platforms;android-34" "build-tools;34.0.0"
         ~/.android/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-        # Set environment variables
-        echo "ANDROID_HOME=$HOME/.android" >> $GITHUB_ENV
-        echo "ANDROID_NDK_HOME=$HOME/.android/android-ndk" >> $GITHUB_ENV
-        echo "PATH=$PATH:$HOME/.android/cmdline-tools/latest/bin:$HOME/.android/platform-tools" >> $GITHUB_ENV
-
-    - name: Install Buildozer and dependencies
-      run: |
-        pip install --upgrade pip virtualenv
-        pip install buildozer cython==0.29.36
+    - name: Install Buildozer
+      run: pip install buildozer cython==0.29.36
 
     - name: Patch ReportLab
       run: |
-        # Remove problematic C extension files
-        find . -name '_rl_accel.c' -delete
-        find . -name '_renderPM.c' -delete
-        
-        # Patch setup.py to disable C extensions
-        for f in $(find . -name setup.py); do
-          sed -i "s/ext_modules=.*/ext_modules=[],/g" $f
-          sed -i "s/name='_rl_accel'/name='_rl_accel_dummy'/g" $f
-          sed -i "s/name='_renderPM'/name='_renderPM_dummy'/g" $f
-        done
-        
-        # Create dummy extension files
-        mkdir -p reportlab/src/rl_addons/rl_accel
-        touch reportlab/src/rl_addons/rl_accel/_rl_accel.py
-        echo "def _fake_extension(): pass" > reportlab/src/rl_addons/rl_accel/__init__.py
-        
-        # Create dummy renderPM files
-        mkdir -p reportlab/src/rl_addons/renderPM
-        touch reportlab/src/rl_addons/renderPM/_renderPM.py
-        echo "def _fake_renderpm(): pass" > reportlab/src/rl_addons/renderPM/__init__.py
-
-    - name: Configure buildozer.spec
-      run: |
-        # Ensure buildozer uses the correct NDK path
-        sed -i "s|#android.ndk_path =.*|android.ndk_path = $HOME/.android/android-ndk|" buildozer.spec
-        
-        # Add reportlab patch settings
-        echo "" >> buildozer.spec
-        echo "# ReportLab patch settings" >> buildozer.spec
-        echo "REPORTLAB_NO_C_EXTENSIONS = 1" >> buildozer.spec
-        echo "REPORTLAB_NO_RENDERPM = 1" >> buildozer.spec
+        find $HOME/.buildozer -name '_rl_accel.c' -delete
+        find $HOME/.buildozer -name '_renderPM.c' -delete
+        echo "def _dummy_extension(): pass" > $(find $HOME/.buildozer -name rl_accel | head -1)/_rl_accel.py
 
     - name: Build APK
       run: |
-        export PATH=$PATH:$ANDROID_HOME/build-tools/34.0.0
-        export ANDROID_NDK_HOME=$HOME/.android/android-ndk
         export REPORTLAB_NO_C_EXTENSIONS=1
         export REPORTLAB_NO_RENDERPM=1
         buildozer -v android release
         mkdir dist
         cp bin/*.apk dist/
 
-    - name: Upload APK artifact
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: gate-survey-app
+        name: app-apk
         path: dist/*.apk
-        retention-days: 5
