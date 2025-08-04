@@ -12,21 +12,30 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Python 3.8  # Downgrade to compatible Python version
+    - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
-        python-version: '3.8'
+        python-version: '3.10'
 
     - name: Install system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          git zip unzip openjdk-8-jdk \  # Use JDK 8 for Android compatibility
-          autoconf libtool pkg-config \
-          zlib1g-dev libncurses5-dev \
-          libncursesw5-dev libtinfo5 \
-          cmake libffi-dev libssl-dev \
-          python3-pip
+          git \
+          zip \
+          unzip \
+          autoconf \
+          libtool \
+          pkg-config \
+          zlib1g-dev \
+          libncurses5-dev \
+          libncursesw5-dev \
+          libtinfo5 \
+          cmake \
+          libffi-dev \
+          libssl-dev \
+          python3-pip \
+          openjdk-11-jdk  # JDK 11 works with modern Android builds
 
     - name: Install Android SDK and NDK
       run: |
@@ -38,13 +47,13 @@ jobs:
         unzip cmdline-tools.zip -d ~/.android/cmdline-tools
         mv ~/.android/cmdline-tools/cmdline-tools ~/.android/cmdline-tools/latest
         
-        # Install NDK 19c (compatible with Python 3.8)
-        wget https://dl.google.com/android/repository/android-ndk-r19c-linux-x86_64.zip
-        unzip android-ndk-r19c-linux-x86_64.zip -d ~/.android
-        mv ~/.android/android-ndk-r19c ~/.android/android-ndk
+        # Install NDK 25b (modern version compatible with Python 3.10)
+        wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
+        unzip android-ndk-r25b-linux.zip -d ~/.android
+        mv ~/.android/android-ndk-r25b ~/.android/android-ndk
         
         # Install SDK components
-        yes | ~/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.android "platform-tools" "platforms;android-28" "build-tools;30.0.3"
+        yes | ~/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.android "platform-tools" "platforms;android-34" "build-tools;34.0.0"
         ~/.android/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
         echo "ANDROID_HOME=$HOME/.android" >> $GITHUB_ENV
@@ -52,18 +61,43 @@ jobs:
 
     - name: Install Buildozer
       run: |
+        pip install --upgrade pip virtualenv
         pip install buildozer cython==0.29.36
 
-    - name: Patch buildozer.spec
+    - name: Configure buildozer.spec
       run: |
-        # Force Python 3.8 and compatible dependencies
-        echo "requirements = python3.8, kivy==2.3.0, reportlab==3.6.13, plyer, android" >> buildozer.spec
-        echo "android.ndk = 19c" >> buildozer.spec
-        echo "android.api = 28" >> buildozer.spec
+        # Create buildozer.spec if not exists
+        if [ ! -f buildozer.spec ]; then
+          buildozer init
+        fi
+
+        # Update requirements and settings
+        sed -i "s|^requirements = .*|requirements = python3,kivy==2.3.0,reportlab==4.1.0,plyer,android|" buildozer.spec
+        sed -i "s|^#android.ndk_path = .*|android.ndk_path = $HOME/.android/android-ndk|" buildozer.spec
+        sed -i "s|^android.api = .*|android.api = 34|" buildozer.spec
+        sed -i "s|^android.minapi = .*|android.minapi = 21|" buildozer.spec
+        sed -i "s|^android.ndk = .*|android.ndk = 25b|" buildozer.spec
+        echo "p4a.branch = master" >> buildozer.spec
+
+    - name: Patch ReportLab
+      run: |
+        # Disable C extensions completely
+        export REPORTLAB_NO_C_EXTENSIONS=1
+        find ~/ -name '_rl_accel.c' -exec rm -f {} \;
+        find ~/ -name '_renderPM.c' -exec rm -f {} \;
+        
+        # Create dummy modules
+        mkdir -p ~/.dummy_patch/reportlab/src/rl_addons/rl_accel
+        echo "def _dummy(): pass" > ~/.dummy_patch/reportlab/src/rl_addons/rl_accel/__init__.py
+        echo "def _dummy(): pass" > ~/.dummy_patch/reportlab/src/rl_addons/rl_accel/_rl_accel.py
+        
+        # Add to PYTHONPATH
+        echo "PYTHONPATH=~/.dummy_patch:$PYTHONPATH" >> $GITHUB_ENV
 
     - name: Build APK
       run: |
-        export PATH=$PATH:$ANDROID_HOME/build-tools/30.0.3
+        export PATH=$PATH:$ANDROID_HOME/build-tools/34.0.0
+        export REPORTLAB_NO_C_EXTENSIONS=1
         buildozer -v android release
         mkdir dist
         cp bin/*.apk dist/
