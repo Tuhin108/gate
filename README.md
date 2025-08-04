@@ -4,7 +4,6 @@
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-blue?style=flat-square&logo=flutter)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-blue?style=flat-square&logo=dart)](https://dart.dev)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](#license)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-lightgrey?style=flat-square)](https://flutter.dev/docs/development/tools/sdk/release-notes)
 
 ## 📖 Overview
