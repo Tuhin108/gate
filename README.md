@@ -178,6 +178,6 @@ The project includes GitHub Actions workflow for automated Android builds:
 
 **Made by Tuhin with ❤️ for the construction and installation industry**
 
-[Report Bug](https://github.com/yourusername/gate-survey-app/issues) • [Request Feature](https://github.com/yourusername/gate-survey-app/issues) • [Documentation](https://github.com/yourusername/gate-survey-app/wiki)
+
 
 </div>
