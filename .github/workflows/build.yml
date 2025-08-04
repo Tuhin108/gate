@@ -47,62 +47,36 @@ jobs:
         unzip cmdline-tools.zip -d ~/.android/cmdline-tools
         mv ~/.android/cmdline-tools/cmdline-tools ~/.android/cmdline-tools/latest
         
-        # Install NDK 25b (correct URL)
+        # Install NDK 25b
         wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
         unzip android-ndk-r25b-linux.zip -d ~/.android
         mv ~/.android/android-ndk-r25b ~/.android/android-ndk
         
         # Install SDK components
-        yes | ~/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        yes | ~/.android/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/.android "platform-tools" "platforms;android-34" "build-tools;34.0.0"
         ~/.android/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
         # Set environment variables
-        echo "ANDROID_HOME=~/.android" >> $GITHUB_ENV
-        echo "ANDROID_NDK_HOME=~/.android/android-ndk" >> $GITHUB_ENV
-        echo "PATH=$PATH:~/.android/cmdline-tools/latest/bin:~/.android/platform-tools" >> $GITHUB_ENV
-        echo "REPORTLAB_RTL_EXTENSIONS=0" >> $GITHUB_ENV
+        echo "ANDROID_HOME=$HOME/.android" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=$HOME/.android/android-ndk" >> $GITHUB_ENV
+        echo "PATH=$PATH:$HOME/.android/cmdline-tools/latest/bin:$HOME/.android/platform-tools" >> $GITHUB_ENV
 
     - name: Install Buildozer and dependencies
       run: |
         pip install --upgrade pip virtualenv
         pip install buildozer cython==0.29.36
 
-    - name: Generate buildozer.spec
+    - name: Configure buildozer.spec
       run: |
-        echo "[app]
-title = Gate Survey App
-package.name = gatesurvey
-package.domain = org.gatesurvey
-source.dir = .
-source.include_exts = py,png,jpg,kv
-source.include_patterns = assets/*
-version = 1.0.0
-requirements = python3,kivy==2.3.0,reportlab,plyer,android
-orientation = portrait
-fullscreen = 0
-
-# Android specific
-android.permissions = CAMERA,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
-android.api = 34
-android.minapi = 21
-android.ndk = 25b
-android.sdk = 34
-android.archs = arm64-v8a,armeabi-v7a
-p4a.branch = master
-
-# Build tools
-android.build_tools = 34.0.0
-android.accept_sdk_license = True
-
-[buildozer]
-log_level = 2
-warn_on_root = 1
-env = REPORTLAB_RTL_EXTENSIONS=0" > buildozer.spec
+        # Add the REPORTLAB_RTL_EXTENSIONS environment variable to buildozer.spec
+        echo "REPORTLAB_RTL_EXTENSIONS = 0" >> buildozer.spec
+        # Ensure buildozer uses the correct NDK path
+        sed -i "s|#android.ndk_path =.*|android.ndk_path = $HOME/.android/android-ndk|" buildozer.spec
 
     - name: Build APK
       run: |
         export PATH=$PATH:$ANDROID_HOME/build-tools/34.0.0
-        export ANDROID_NDK_HOME=~/.android/android-ndk
+        export ANDROID_NDK_HOME=$HOME/.android/android-ndk
         export REPORTLAB_RTL_EXTENSIONS=0
         buildozer -v android release
         mkdir dist
