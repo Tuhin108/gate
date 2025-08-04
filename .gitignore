@@ -1,0 +1,20 @@
+# Build artifacts
+bin/
+buildozer/
+dist/
+*.apk
+*.spec
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+*.log
+*.log.*
+
+# OS files
+.DS_Store
+Thumbs.db
