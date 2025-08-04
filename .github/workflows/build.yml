@@ -66,18 +66,17 @@ jobs:
         pip install --upgrade pip virtualenv
         pip install buildozer cython==0.29.36
 
-    - name: Configure buildozer.spec
+    - name: Patch reportlab setup
       run: |
-        # Add the REPORTLAB_RTL_EXTENSIONS environment variable to buildozer.spec
-        echo "REPORTLAB_RTL_EXTENSIONS = 0" >> buildozer.spec
-        # Ensure buildozer uses the correct NDK path
+        # Force reportlab to skip problematic C extensions
+        echo "REPORTLAB_NO_C_EXTENSIONS=1" >> $GITHUB_ENV
         sed -i "s|#android.ndk_path =.*|android.ndk_path = $HOME/.android/android-ndk|" buildozer.spec
 
     - name: Build APK
       run: |
         export PATH=$PATH:$ANDROID_HOME/build-tools/34.0.0
         export ANDROID_NDK_HOME=$HOME/.android/android-ndk
-        export REPORTLAB_RTL_EXTENSIONS=0
+        export REPORTLAB_NO_C_EXTENSIONS=1
         buildozer -v android release
         mkdir dist
         cp bin/*.apk dist/
