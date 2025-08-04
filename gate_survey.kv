@@ -1,0 +1,62 @@
+#:import hex kivy.utils.get_color_from_hex
+
+<WelcomeScreen>:
+    canvas.before:
+        Color:
+            rgba: hex('#f5f5f5')
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+<GateTypeScreen>:
+    canvas.before:
+        Color:
+            rgba: hex('#e8f4f8')
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+<CameraScreen>:
+    canvas.before:
+        Color:
+            rgba: hex('#333333')
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+<SlidingGateSurveyScreen>:
+    canvas.before:
+        Color:
+            rgba: hex('#f8f8f8')
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+<SwingGateSurveyScreen>:
+    canvas.before:
+        Color:
+            rgba: hex('#f8f8f8')
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+<SummaryScreen>:
+    canvas.before:
+        Color:
+            rgba: hex('#e8f4f8')
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+<TextInput>:
+    background_color: [1, 1, 1, 1]
+    foreground_color: [0, 0, 0, 1]
+    padding: [10, 10]
+    size_hint_y: None
+    height: 44
+
+<Button>:
+    background_color: [0.2, 0.6, 0.9, 1]
+    color: [1, 1, 1, 1]
+    font_size: 18
+    bold: True
