@@ -10,6 +10,9 @@
 
 Gate Survey App is a professional mobile application designed for contractors, surveyors, and installers to efficiently conduct comprehensive gate installation surveys. The app streamlines the process of collecting measurements, capturing site photos, and generating intelligent recommendations for both sliding and swing gate installations.
 
+## 🔥 Download the App 
+*Head to Apk Folder and You will find "app-release.apk", Download the file, Install it and you are good to go...*
+
 ## ✨ Key Features
 
 ### 🎯 **Smart Survey System**
