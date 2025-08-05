@@ -14,6 +14,7 @@ Gate Survey App is a professional mobile application designed for contractors, s
 *Head to Apk Folder and You will find "app-release.apk", Download the file, Install it and you are good to go...*
 
 **OR**
+
 *Click the Link Below to Head over to the API file and Download it*
 https://github.com/Tuhin108/gate_survey_app/blob/main/Apk/app-release.apk
 
